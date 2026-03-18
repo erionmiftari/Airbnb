@@ -1,4 +1,7 @@
-node_modules
+.vs/
+node_modules/
+bin/
+obj/
 .env
 build
 .DS_Store
