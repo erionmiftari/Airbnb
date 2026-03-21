@@ -6,7 +6,7 @@ namespace Airbnb.Services
 {
     public class BookingService
     {
-        private IRepository<User> userRepo = new FileRepository<User>();
+        private IRepository<User> userRepo = new FileRepository<User>("users.json");
 
         public void Start()
         {
@@ -19,18 +19,9 @@ namespace Airbnb.Services
 
                 string input = Console.ReadLine();
 
-                if (input == "1")
-                {
-                    CreateUser();
-                }
-                else if (input == "2")
-                {
-                    ShowUsers();
-                }
-                else if (input == "0")
-                {
-                    break;
-                }
+                if (input == "1") CreateUser();
+                else if (input == "2") ShowUsers();
+                else if (input == "0") break;
             }
         }
 
@@ -38,27 +29,19 @@ namespace Airbnb.Services
         {
             Console.Write("Emri: ");
             string name = Console.ReadLine();
-
-            User user = new User
+            userRepo.Add(new User
             {
-                Id = userRepo.GetAll().Count,
+                Id = userRepo.GetAll().Count + 1,
                 Name = name
-            };
-
-            userRepo.Add(user);
+            });
             userRepo.Save();
-
-            Console.WriteLine("User u kriju!");
+            Console.WriteLine("User u krijua!");
         }
 
         private void ShowUsers()
         {
-            var users = userRepo.GetAll();
-
-            foreach (var user in users)
-            {
-                Console.WriteLine($"ID: {user.Id}, Name: {user.Name}");
-            }
+            foreach (var user in userRepo.GetAll())
+                Console.WriteLine($"ID: {user.Id}, Emri: {user.Name}");
         }
     }
 }

@@ -1,11 +1,10 @@
 ﻿using System;
+using Airbnb.Services;
 
-public class Class1
+class Program
 {
-	public Class1()
-	{
-        using Airbnb.Services;
-
+    static void Main(string[] args)
+    {
         var service = new BookingService();
         service.Start();
     }
