@@ -1,23 +1,41 @@
-﻿# Architecture
+# Architecture
 
-## Layers
+## Shtresat e Projektit
 
-### UI Layer
-Merret me ndërveprimin me përdoruesin (Program.cs).
+### UI Layer (UI/Program.cs)
+Merret me ndërveprimin me përdoruesin. Vetëm inicializon shërbimin dhe e starton.
 
-### Services Layer
-Përmban logjikën e aplikacionit (UserService, BookingService).
+### Services Layer (Services/)
+Përmban logjikën e aplikacionit. BookingService menaxhon krijimin dhe shfaqjen e të dhënave.
 
-### Data Layer
-Menaxhon të dhënat përmes Repository Pattern.
+### Data Layer (Data/)
+Menaxhon ruajtjen e të dhënave përmes Repository Pattern.
+- `IRepository<T>` — interface gjenerik me operacione CRUD
+- `FileRepository` — implementim që ruan të dhënat në CSV file (për `Listing`)
 
-### Models Layer
-Përfaqëson strukturën e të dhënave (User, Listing, Booking).
+### Models Layer (Models/)
+Përfaqëson strukturën e të dhënave: User, Listing, Booking.
 
 ---
 
-## Pse kjo arkitekturë?
+## Arsyet e Vendimeve
 
-- Ndarje e qartë e përgjegjësive
-- Kod më i organizuar dhe i pastër
-- Lehtë për mirëmbajtje dhe zgjerim në të ardhmen
+- **Repository Pattern** — abstrakton aksesin në të dhëna, kështu nëse ndryshojmë nga file në database, ndryshojmë vetëm FileRepository, jo gjithë kodin
+- **Interface IRepository** — lejon testim dhe zëvendësim të lehtë të implementimit
+- **Shtresa të ndara** — çdo shtresë ka një përgjegjësi të vetme, kodi është më i qartë
+
+---
+
+## Parimet SOLID të Aplikuara
+
+### S — Single Responsibility Principle ✅
+Çdo klasë ka një përgjegjësi të vetme:
+- `User`, `Listing`, `Booking` — vetëm ruajnë të dhëna
+- `ListingService` — vetëm logjika e biznesit
+- - `FileRepository` — vetëm ruajtja e të dhënave
+
+### O — Open/Closed Principle ✅
+`FileRepository` implementon `IRepository`. Nëse duam `DatabaseRepository`, krijojmë klasë të re pa ndryshuar kodin ekzistues.
+
+### D — Dependency Inversion Principle ✅
+`ListingService` varet nga `IRepository<Listing>` (interface), jo nga `FileRepository` direkt.
