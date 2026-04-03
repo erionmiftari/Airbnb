@@ -23,6 +23,7 @@ class Program
             Console.WriteLine("3. Shto Listing");
             Console.WriteLine("4. Update Listing");
             Console.WriteLine("5. Delete Listing");
+            Console.WriteLine("6. Statistika");
             Console.WriteLine("0. Exit");
             Console.Write("Zgjedhja: ");
 
@@ -36,7 +37,9 @@ class Program
                 else if (input == "3") UiAdd(service);
                 else if (input == "4") UiUpdate(service);
                 else if (input == "5") UiDelete(service);
+                else if (input == "6") UiStats(service);
                 else if (input == "0") break;
+                else Console.WriteLine("Opsion i pavlefshëm.");
             }
             catch (Exception ex)
             {
@@ -47,108 +50,212 @@ class Program
 
     static void UiList(ListingService service)
     {
-        Console.Write("Filter title (Enter për skip): ");
-        string? title = Console.ReadLine();
-
-        Console.Write("Min price (Enter për skip): ");
-        string? minRaw = Console.ReadLine();
-
-        Console.Write("Max price (Enter për skip): ");
-        string? maxRaw = Console.ReadLine();
-
-        double? min = double.TryParse(minRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var mn) ? mn : null;
-        double? max = double.TryParse(maxRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var mx) ? mx : null;
-
-        var items = service.List(titleContains: string.IsNullOrWhiteSpace(title) ? null : title, minPrice: min, maxPrice: max);
-        if (items.Count == 0)
+        try
         {
-            Console.WriteLine("Nuk ka rezultate.");
-            return;
-        }
+            Console.Write("Filter title (Enter për skip): ");
+            string? title = Console.ReadLine();
 
-        foreach (var x in items)
-            Console.WriteLine($"ID: {x.Id} | Title: {x.Title} | Price: {x.Price} | OwnerId: {x.OwnerId}");
+            Console.Write("Min price (Enter për skip): ");
+            string? minRaw = Console.ReadLine();
+
+            Console.Write("Max price (Enter për skip): ");
+            string? maxRaw = Console.ReadLine();
+
+            if (!TryParseNullableDouble(minRaw, out var min))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid për minimumin.");
+                return;
+            }
+
+            if (!TryParseNullableDouble(maxRaw, out var max))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid për maksimumin.");
+                return;
+            }
+
+            Console.WriteLine("Sortimi: 1=ID, 2=Title A-Z, 3=Price rritës, 4=Price zbritës");
+            Console.Write("Zgjedhja e sortimit: ");
+            string? sortRaw = Console.ReadLine();
+            var sort = ParseSort(sortRaw);
+
+            var items = service.List(
+                titleContains: string.IsNullOrWhiteSpace(title) ? null : title,
+                minPrice: min,
+                maxPrice: max,
+                sort: sort);
+
+            if (items.Count == 0)
+            {
+                Console.WriteLine("Nuk ka rezultate.");
+                return;
+            }
+
+            foreach (var x in items)
+                Console.WriteLine($"ID: {x.Id} | Title: {x.Title} | Price: {x.Price} | OwnerId: {x.OwnerId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Gabim në listim: {ex.Message}");
+        }
     }
 
     static void UiGetById(ListingService service)
     {
-        Console.Write("ID: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
+        try
         {
-            Console.WriteLine("ID jo valide.");
-            return;
-        }
+            Console.Write("ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int id))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid.");
+                return;
+            }
 
-        var x = service.GetById(id);
-        if (x == null) Console.WriteLine("Nuk u gjet.");
-        else Console.WriteLine($"ID: {x.Id} | Title: {x.Title} | Price: {x.Price} | OwnerId: {x.OwnerId}");
+            var x = service.GetById(id);
+            if (x == null) Console.WriteLine("Itemi nuk u gjet.");
+            else Console.WriteLine($"ID: {x.Id} | Title: {x.Title} | Price: {x.Price} | OwnerId: {x.OwnerId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Gabim në kërkim: {ex.Message}");
+        }
     }
 
     static void UiAdd(ListingService service)
     {
-        Console.Write("Title: ");
-        string title = Console.ReadLine() ?? "";
-
-        Console.Write("Price: ");
-        string priceRaw = Console.ReadLine() ?? "";
-        if (!double.TryParse(priceRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out double price))
+        try
         {
-            Console.WriteLine("Price jo valide.");
-            return;
-        }
+            Console.Write("Title: ");
+            string title = Console.ReadLine() ?? "";
 
-        Console.Write("OwnerId: ");
-        if (!int.TryParse(Console.ReadLine(), out int ownerId))
+            Console.Write("Price: ");
+            string priceRaw = Console.ReadLine() ?? "";
+
+            Console.Write("OwnerId: ");
+            string ownerIdRaw = Console.ReadLine() ?? "";
+
+            bool ok = service.TryAdd(title, priceRaw, ownerIdRaw, out var added, out var message);
+            if (!ok)
+            {
+                Console.WriteLine(message);
+                return;
+            }
+
+            Console.WriteLine($"U shtua me sukses. ID e re: {added!.Id}");
+        }
+        catch (Exception ex)
         {
-            Console.WriteLine("OwnerId jo valide.");
-            return;
+            Console.WriteLine($"Gabim gjatë shtimit: {ex.Message}");
         }
-
-        var added = service.Add(title, price, ownerId);
-        Console.WriteLine($"U shtua me sukses. ID e re: {added.Id}");
     }
 
     static void UiUpdate(ListingService service)
     {
-        Console.Write("ID: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
+        try
         {
-            Console.WriteLine("ID jo valide.");
-            return;
+            Console.Write("ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int id))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid.");
+                return;
+            }
+
+            Console.Write("Title: ");
+            string title = Console.ReadLine() ?? "";
+
+            Console.Write("Price: ");
+            string priceRaw = Console.ReadLine() ?? "";
+
+            Console.Write("OwnerId: ");
+            string ownerIdRaw = Console.ReadLine() ?? "";
+
+            service.TryUpdate(id, title, priceRaw, ownerIdRaw, out string message);
+            Console.WriteLine(message);
         }
-
-        Console.Write("Title: ");
-        string title = Console.ReadLine() ?? "";
-
-        Console.Write("Price: ");
-        string priceRaw = Console.ReadLine() ?? "";
-        if (!double.TryParse(priceRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out double price))
+        catch (Exception ex)
         {
-            Console.WriteLine("Price jo valide.");
-            return;
+            Console.WriteLine($"Gabim gjatë përditësimit: {ex.Message}");
         }
-
-        Console.Write("OwnerId: ");
-        if (!int.TryParse(Console.ReadLine(), out int ownerId))
-        {
-            Console.WriteLine("OwnerId jo valide.");
-            return;
-        }
-
-        bool ok = service.Update(id, title, price, ownerId);
-        Console.WriteLine(ok ? "U përditësua me sukses." : "Nuk u gjet ID për update.");
     }
 
     static void UiDelete(ListingService service)
     {
-        Console.Write("ID: ");
-        if (!int.TryParse(Console.ReadLine(), out int id))
+        try
         {
-            Console.WriteLine("ID jo valide.");
-            return;
-        }
+            Console.Write("ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int id))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid.");
+                return;
+            }
 
-        bool ok = service.Delete(id);
-        Console.WriteLine(ok ? "U fshi me sukses." : "Nuk u gjet ID për delete.");
+            bool ok = service.Delete(id);
+            Console.WriteLine(ok ? "U fshi me sukses." : "Itemi nuk u gjet.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Gabim gjatë fshirjes: {ex.Message}");
+        }
+    }
+
+    static void UiStats(ListingService service)
+    {
+        try
+        {
+            Console.Write("Filter title (Enter për skip): ");
+            string? title = Console.ReadLine();
+
+            Console.Write("Min price (Enter për skip): ");
+            string? minRaw = Console.ReadLine();
+            if (!TryParseNullableDouble(minRaw, out var min))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid për minimumin.");
+                return;
+            }
+
+            Console.Write("Max price (Enter për skip): ");
+            string? maxRaw = Console.ReadLine();
+            if (!TryParseNullableDouble(maxRaw, out var max))
+            {
+                Console.WriteLine("Ju lutem shkruani numër valid për maksimumin.");
+                return;
+            }
+
+            var stats = service.GetStatistics(
+                string.IsNullOrWhiteSpace(title) ? null : title,
+                min,
+                max);
+
+            Console.WriteLine("--- Statistika ---");
+            Console.WriteLine($"Numri i itemave: {stats.Count}");
+            Console.WriteLine($"Totali i çmimeve: {stats.TotalPrice}");
+            Console.WriteLine($"Mesatarja: {stats.AveragePrice}");
+            Console.WriteLine($"Minimumi: {stats.MinPrice}");
+            Console.WriteLine($"Maksimumi: {stats.MaxPrice}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Gabim në statistika: {ex.Message}");
+        }
+    }
+
+    static bool TryParseNullableDouble(string? input, out double? value)
+    {
+        value = null;
+        if (string.IsNullOrWhiteSpace(input)) return true;
+        if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+        {
+            value = parsed;
+            return true;
+        }
+        return false;
+    }
+
+    static ListingSortOption ParseSort(string? sortRaw)
+    {
+        if (!int.TryParse(sortRaw, out int sortValue))
+            return ListingSortOption.IdAsc;
+        if (!Enum.IsDefined(typeof(ListingSortOption), sortValue))
+            return ListingSortOption.IdAsc;
+        return (ListingSortOption)sortValue;
     }
 }

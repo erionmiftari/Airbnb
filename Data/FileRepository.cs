@@ -53,34 +53,54 @@ namespace Airbnb.Data
 
         public void Save()
         {
-            EnsureDirectory();
-            using var sw = new StreamWriter(_filePath, false);
-            sw.WriteLine("Id,Title,Price,OwnerId");
-            foreach (var x in _items.OrderBy(i => i.Id))
+            try
             {
-                sw.WriteLine($"{x.Id},{Escape(x.Title)},{x.Price.ToString(CultureInfo.InvariantCulture)},{x.OwnerId}");
+                EnsureDirectory();
+                using var sw = new StreamWriter(_filePath, false);
+                sw.WriteLine("Id,Title,Price,OwnerId");
+                foreach (var x in _items.OrderBy(i => i.Id))
+                {
+                    sw.WriteLine($"{x.Id},{Escape(x.Title)},{x.Price.ToString(CultureInfo.InvariantCulture)},{x.OwnerId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Gabim gjatë ruajtjes së file-it: {ex.Message}");
             }
         }
 
         private void LoadFromCsv()
         {
             _items.Clear();
-            if (!File.Exists(_filePath)) return;
-
-            var lines = File.ReadAllLines(_filePath);
-            foreach (var raw in lines.Skip(1)) // skip header
+            try
             {
-                if (string.IsNullOrWhiteSpace(raw)) continue;
+                if (!File.Exists(_filePath))
+                {
+                    EnsureDirectory();
+                    File.WriteAllText(_filePath, "Id,Title,Price,OwnerId" + Environment.NewLine);
+                    Console.WriteLine("File nuk u gjet, po krijoj file të ri...");
+                    return;
+                }
 
-                var parts = SplitCsvLine(raw);
-                if (parts.Count < 4) continue;
+                var lines = File.ReadAllLines(_filePath);
+                foreach (var raw in lines.Skip(1)) // skip header
+                {
+                    if (string.IsNullOrWhiteSpace(raw)) continue;
 
-                if (!int.TryParse(parts[0], out int id)) continue;
-                string title = Unescape(parts[1]);
-                if (!double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double price)) continue;
-                if (!int.TryParse(parts[3], out int ownerId)) continue;
+                    var parts = SplitCsvLine(raw);
+                    if (parts.Count < 4) continue;
 
-                _items.Add(new Listing { Id = id, Title = title, Price = price, OwnerId = ownerId });
+                    if (!int.TryParse(parts[0], out int id)) continue;
+                    string title = Unescape(parts[1]);
+                    if (!double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double price)) continue;
+                    if (!int.TryParse(parts[3], out int ownerId)) continue;
+
+                    _items.Add(new Listing { Id = id, Title = title, Price = price, OwnerId = ownerId });
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Gabim gjatë leximit të file-it: {ex.Message}");
             }
         }
 
