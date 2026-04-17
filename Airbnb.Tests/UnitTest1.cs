@@ -46,6 +46,24 @@ public class ListingServiceTests
     }
 
     [Fact]
+    public void List_MinPriceGreaterThanMax_ThrowsArgumentException()
+    {
+        var repo = new InMemoryListingRepository();
+        var service = new ListingService(repo);
+
+        Assert.Throws<ArgumentException>(() => service.List(minPrice: 100, maxPrice: 50));
+    }
+
+    [Fact]
+    public void Add_OwnerIdZero_ThrowsArgumentException()
+    {
+        var repo = new InMemoryListingRepository();
+        var service = new ListingService(repo);
+
+        Assert.Throws<ArgumentException>(() => service.Add("Valid", 99, 0));
+    }
+
+    [Fact]
     public void GetStatistics_ReturnsCorrectTotals()
     {
         var repo = new InMemoryListingRepository();

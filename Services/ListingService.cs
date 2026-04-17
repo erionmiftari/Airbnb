@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Airbnb.Data;
 using Airbnb.Models;
@@ -38,6 +39,8 @@ namespace Airbnb.Services
             double? maxPrice = null,
             ListingSortOption sort = ListingSortOption.IdAsc)
         {
+            ListingValidation.ValidatePriceFilterRange(minPrice, maxPrice);
+
             var items = _repo.GetAll().AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(titleContains))
@@ -90,13 +93,11 @@ namespace Airbnb.Services
 
         public Listing Add(string title, double price, int ownerId)
         {
-            title = title?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("Emri/Title nuk mund të jetë bosh.");
-            if (title.Contains(","))
-                throw new ArgumentException("Title nuk lejohet të ketë presje (,).");
-            if (price <= 0)
-                throw new ArgumentException("Çmimi duhet të jetë > 0.");
+            ListingValidation.ValidateTitle(title);
+            ListingValidation.ValidatePrice(price);
+            ListingValidation.ValidateOwnerId(ownerId);
+
+            title = title!.Trim();
 
             var all = _repo.GetAll();
             int nextId = all.Count == 0 ? 1 : all.Max(x => x.Id) + 1;
@@ -120,13 +121,13 @@ namespace Airbnb.Services
             message = "";
             try
             {
-                if (!double.TryParse(priceRaw, out var price))
+                if (!double.TryParse(priceRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var price))
                 {
                     message = "Ju lutem shkruani numër valid për çmimin.";
                     return false;
                 }
 
-                if (!int.TryParse(ownerIdRaw, out var ownerId))
+                if (!int.TryParse(ownerIdRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ownerId))
                 {
                     message = "Ju lutem shkruani numër valid për OwnerId.";
                     return false;
@@ -144,13 +145,11 @@ namespace Airbnb.Services
 
         public bool Update(int id, string title, double price, int ownerId)
         {
-            title = title?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("Emri/Title nuk mund të jetë bosh.");
-            if (title.Contains(","))
-                throw new ArgumentException("Title nuk lejohet të ketë presje (,).");
-            if (price <= 0)
-                throw new ArgumentException("Çmimi duhet të jetë > 0.");
+            ListingValidation.ValidateTitle(title);
+            ListingValidation.ValidatePrice(price);
+            ListingValidation.ValidateOwnerId(ownerId);
+
+            title = title!.Trim();
 
             var ok = _repo.Update(new Listing
             {
@@ -176,13 +175,13 @@ namespace Airbnb.Services
             message = "";
             try
             {
-                if (!double.TryParse(priceRaw, out var price))
+                if (!double.TryParse(priceRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var price))
                 {
                     message = "Ju lutem shkruani numër valid për çmimin.";
                     return false;
                 }
 
-                if (!int.TryParse(ownerIdRaw, out var ownerId))
+                if (!int.TryParse(ownerIdRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ownerId))
                 {
                     message = "Ju lutem shkruani numër valid për OwnerId.";
                     return false;
@@ -200,4 +199,3 @@ namespace Airbnb.Services
         }
     }
 }
-

@@ -10,11 +10,16 @@ namespace Airbnb.Data
     public class FileRepository : IRepository<Listing>
     {
         private readonly string _filePath;
+        private readonly Action<string>? _onMissingFileCreated;
         private readonly List<Listing> _items = new List<Listing>();
 
-        public FileRepository(string filePath)
+        /// <param name="onMissingFileCreated">
+        /// Opsionale: thirret kur CSV nuk ekziston dhe krijohet file i ri me header (UI kalon p.sh. Console.WriteLine).
+        /// </param>
+        public FileRepository(string filePath, Action<string>? onMissingFileCreated = null)
         {
             _filePath = filePath;
+            _onMissingFileCreated = onMissingFileCreated;
         }
 
         public List<Listing> GetAll()
@@ -78,7 +83,7 @@ namespace Airbnb.Data
                 {
                     EnsureDirectory();
                     File.WriteAllText(_filePath, "Id,Title,Price,OwnerId" + Environment.NewLine);
-                    Console.WriteLine("File nuk u gjet, po krijoj file të ri...");
+                    _onMissingFileCreated?.Invoke("File nuk u gjet, po krijoj file të ri...");
                     return;
                 }
 

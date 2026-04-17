@@ -12,7 +12,7 @@ class Program
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
         string dataPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "listings.csv");
-        var repo = new FileRepository(dataPath);
+        var repo = new FileRepository(dataPath, msg => Console.WriteLine(msg));
         var service = new ListingService(repo);
 
         while (true)
@@ -52,26 +52,8 @@ class Program
     {
         try
         {
-            Console.Write("Filter title (Enter për skip): ");
-            string? title = Console.ReadLine();
-
-            Console.Write("Min price (Enter për skip): ");
-            string? minRaw = Console.ReadLine();
-
-            Console.Write("Max price (Enter për skip): ");
-            string? maxRaw = Console.ReadLine();
-
-            if (!TryParseNullableDouble(minRaw, out var min))
-            {
-                Console.WriteLine("Ju lutem shkruani numër valid për minimumin.");
+            if (!TryReadTitleAndPriceFilters(out string? title, out double? min, out double? max))
                 return;
-            }
-
-            if (!TryParseNullableDouble(maxRaw, out var max))
-            {
-                Console.WriteLine("Ju lutem shkruani numër valid për maksimumin.");
-                return;
-            }
 
             Console.WriteLine("Sortimi: 1=ID, 2=Title A-Z, 3=Price rritës, 4=Price zbritës");
             Console.Write("Zgjedhja e sortimit: ");
@@ -201,24 +183,8 @@ class Program
     {
         try
         {
-            Console.Write("Filter title (Enter për skip): ");
-            string? title = Console.ReadLine();
-
-            Console.Write("Min price (Enter për skip): ");
-            string? minRaw = Console.ReadLine();
-            if (!TryParseNullableDouble(minRaw, out var min))
-            {
-                Console.WriteLine("Ju lutem shkruani numër valid për minimumin.");
+            if (!TryReadTitleAndPriceFilters(out string? title, out double? min, out double? max))
                 return;
-            }
-
-            Console.Write("Max price (Enter për skip): ");
-            string? maxRaw = Console.ReadLine();
-            if (!TryParseNullableDouble(maxRaw, out var max))
-            {
-                Console.WriteLine("Ju lutem shkruani numër valid për maksimumin.");
-                return;
-            }
 
             var stats = service.GetStatistics(
                 string.IsNullOrWhiteSpace(title) ? null : title,
@@ -236,6 +202,37 @@ class Program
         {
             Console.WriteLine($"Gabim në statistika: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Lexon të njëjtat filtra (title, min, max) për listim dhe statistika — më pak duplikim në UI.
+    /// </summary>
+    static bool TryReadTitleAndPriceFilters(out string? title, out double? min, out double? max)
+    {
+        title = null;
+        min = null;
+        max = null;
+
+        Console.Write("Filter title (Enter për skip): ");
+        title = Console.ReadLine();
+
+        Console.Write("Min price (Enter për skip): ");
+        string? minRaw = Console.ReadLine();
+        if (!TryParseNullableDouble(minRaw, out min))
+        {
+            Console.WriteLine("Ju lutem shkruani numër valid për minimumin.");
+            return false;
+        }
+
+        Console.Write("Max price (Enter për skip): ");
+        string? maxRaw = Console.ReadLine();
+        if (!TryParseNullableDouble(maxRaw, out max))
+        {
+            Console.WriteLine("Ju lutem shkruani numër valid për maksimumin.");
+            return false;
+        }
+
+        return true;
     }
 
     static bool TryParseNullableDouble(string? input, out double? value)

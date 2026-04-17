@@ -1,41 +1,79 @@
-# Architecture
+# Architecture — Airbnb (Console)
 
-## Shtresat e Projektit
+## Qëllimi i dokumentit
 
-### UI Layer (UI/Program.cs)
-Merret me ndërveprimin me përdoruesin. Vetëm inicializon shërbimin dhe e starton.
-
-### Services Layer (Services/)
-Përmban logjikën e aplikacionit. BookingService menaxhon krijimin dhe shfaqjen e të dhënave.
-
-### Data Layer (Data/)
-Menaxhon ruajtjen e të dhënave përmes Repository Pattern.
-- `IRepository<T>` — interface gjenerik me operacione CRUD
-- `FileRepository` — implementim që ruan të dhënat në CSV file (për `Listing`)
-
-### Models Layer (Models/)
-Përfaqëson strukturën e të dhënave: User, Listing, Booking.
+Ky dokument përshkruan **shtresat** e aplikacionit dhe **rrjedhën e të dhënave** nga UI deri në ruajtje në file, që të jetë e qartë kush bën çfarë.
 
 ---
 
-## Arsyet e Vendimeve
+## Shtresat e projektit
 
-- **Repository Pattern** — abstrakton aksesin në të dhëna, kështu nëse ndryshojmë nga file në database, ndryshojmë vetëm FileRepository, jo gjithë kodin
-- **Interface IRepository** — lejon testim dhe zëvendësim të lehtë të implementimit
-- **Shtresa të ndara** — çdo shtresë ka një përgjegjësi të vetme, kodi është më i qartë
+```text
+┌─────────────────────────────────────────┐
+│  UI (UI/Program.cs)                    │
+│  - lexon input nga përdoruesi            │
+│  - shfaq mesazhe / rezultate           │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│  Service (Services/ListingService.cs)    │
+│  - logjika e biznesit (filtrim, sort,   │
+│    statistika, validim)                 │
+│  - nuk lexon/shkruan file direkt        │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────┐
+│  Repository (Data/FileRepository.cs)   │
+│  - implementon IRepository<Listing>    │
+│  - lexon/shkruan CSV                    │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+              Data/listings.csv
+```
+
+### UI Layer (`UI/Program.cs`)
+
+- Shfaq menunë konsol dhe lexon zgjedhjet.
+- Nuk përmban logjikë biznesi (p.sh. filtrimi i listës bëhet përmes `ListingService`).
+- Për mesazhin kur mungon CSV, UI kalon një callback te `FileRepository` (nuk duhet të printojë vetë repository-i).
+
+### Services Layer (`Services/`)
+
+- **`ListingService`** — operacionet e listings: `List`, `GetStatistics`, `Add`, `Update`, `Delete`, dhe metodat `TryAdd`/`TryUpdate` për input me string nga UI.
+- **`ListingValidation`** (klasë e brendshme statike) — rregulla të përbashkëta validimi për të shmangur duplikimin midis `Add` dhe `Update`.
+
+### Data Layer (`Data/`)
+
+- **`IRepository<T>`** — kontratë për CRUD + `Save()`.
+- **`FileRepository`** — implementim CSV për `Listing`; përfshin parsing të thjeshtë me mbështetje për thonjëza në title.
+
+### Models Layer (`Models/`)
+
+- **`Listing`**, **`User`**, **`Booking`** — struktura të të dhënave. Në këtë fazë, flow kryesor i konsolës është përqendruar te `Listing`.
 
 ---
 
-## Parimet SOLID të Aplikuara
+## Parimet kryesore
 
-### S — Single Responsibility Principle ✅
-Çdo klasë ka një përgjegjësi të vetme:
-- `User`, `Listing`, `Booking` — vetëm ruajnë të dhëna
-- `ListingService` — vetëm logjika e biznesit
-- - `FileRepository` — vetëm ruajtja e të dhënave
+- **Repository Pattern** — `ListingService` varet nga `IRepository<Listing>`, jo nga detajet e file-it.
+- **Separation of Concerns** — UI nuk lexon CSV; Repository nuk përmban logjikë biznesi për filtrim/statistika.
+- **Testueshmëri** — `ListingService` mund të testohet me një repository in-memory që implementon `IRepository<Listing>`.
 
-### O — Open/Closed Principle ✅
-`FileRepository` implementon `IRepository`. Nëse duam `DatabaseRepository`, krijojmë klasë të re pa ndryshuar kodin ekzistues.
+---
 
-### D — Dependency Inversion Principle ✅
-`ListingService` varet nga `IRepository<Listing>` (interface), jo nga `FileRepository` direkt.
+## Parimet SOLID (përmbledhje)
+
+| Parimi | Si aplikohet këtu |
+|--------|-------------------|
+| **S** | `ListingService` = biznes; `FileRepository` = ruajtje; modelet = të dhëna. |
+| **O** | Mund të shtohet `DatabaseRepository` pa ndryshuar `ListingService` nëse implementon `IRepository<Listing>`. |
+| **D** | `ListingService` injektohet me `IRepository<Listing>`, jo me klasë konkrete. |
+
+---
+
+## Shënim për të ardhmen
+
+Një API (ASP.NET Core) do të vendoste të njëjtën logjikë në `ListingService`, duke zëvendësuar vetëm shtresën UI (kontroller + HTTP) pa prekur repository-në nëse kontrata mbetet e njëjtë.
